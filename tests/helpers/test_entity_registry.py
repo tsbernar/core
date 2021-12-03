@@ -41,6 +41,16 @@ def update_events(hass):
     return events
 
 
+async def test_get(hass, registry):
+    """test we can get an item."""
+    entry = registry.async_get_or_create("light", "hue", "1234")
+
+    assert registry.async_get(entry.entity_id) is entry
+    assert registry.async_get(entry.id) is entry
+    assert registry.async_get("blah") is None
+    assert registry.async_get("blah.blah") is None
+
+
 async def test_get_or_create_returns_same_entry(hass, registry, update_events):
     """Make sure we do not duplicate entries."""
     entry = registry.async_get_or_create("light", "hue", "1234")

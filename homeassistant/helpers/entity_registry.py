@@ -394,8 +394,8 @@ class EntityRegistry:
 
     @callback
     def async_get(self, entity_id: str) -> RegistryEntry | None:
-        """Get EntityEntry for an entity_id."""
-        return self.entities.get(entity_id)
+        """Get EntityEntry for an entity_id or entity entry id."""
+        return self.entities.get(entity_id) or self.entities.get_entry(entity_id)
 
     @callback
     def async_get_entity_id(
