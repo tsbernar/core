@@ -13,6 +13,8 @@
             "invalid_url": "Invalid URL",
             "login_attempts_exceeded": "Maximum login attempts exceeded, please try again later",
             "response_error": "Unknown error from device",
+            "ssl_error_try_plain": "HTTPS error, please try a plain HTTP URL",
+            "ssl_error_try_unverified": "HTTPS error, please try unverified HTTPS or a plain HTTP URL",
             "unknown": "Unexpected error"
         },
         "flow_title": "{name}",
@@ -28,6 +30,7 @@
             "user": {
                 "data": {
                     "password": "Password",
+                    "unverified_https": "Use unverified HTTPS",
                     "url": "URL",
                     "username": "Username"
                 },
