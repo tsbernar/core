@@ -18,6 +18,7 @@ from homeassistant.const import (
     CONF_RECIPIENT,
     CONF_URL,
     CONF_USERNAME,
+    CONF_VERIFY_SSL,
 )
 
 from tests.common import MockConfigEntry
@@ -26,6 +27,7 @@ FIXTURE_UNIQUE_ID = "SERIALNUMBER"
 
 FIXTURE_USER_INPUT = {
     CONF_URL: "http://192.168.1.1/",
+    CONF_VERIFY_SSL: False,
     CONF_USERNAME: "admin",
     CONF_PASSWORD: "secret",
 }
@@ -90,16 +92,30 @@ async def test_already_configured(hass, requests_mock, login_requests_mock):
     assert result["reason"] == "already_configured"
 
 
-async def test_connection_error(hass, requests_mock):
-    """Test we show user form on connection error."""
-    requests_mock.request(ANY, ANY, exc=ConnectionError())
+@pytest.mark.parametrize(
+    ("exception", "errors", "data_patch"),
+    (
+        (ConnectionError(), {CONF_URL: "unknown"}, {}),
+        (requests.exceptions.SSLError(), {CONF_URL: "ssl_error_try_plain"}, {}),
+        (
+            requests.exceptions.SSLError(),
+            {CONF_URL: "ssl_error_try_unverified"},
+            {CONF_VERIFY_SSL: True},
+        ),
+    ),
+)
+async def test_connection_errors(hass, requests_mock, exception, errors, data_patch):
+    """Test we show user form on various errors."""
+    requests_mock.request(ANY, ANY, exc=exception)
     result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}, data=FIXTURE_USER_INPUT
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data=FIXTURE_USER_INPUT | data_patch,
     )
 
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "user"
-    assert result["errors"] == {CONF_URL: "unknown"}
+    assert result["errors"] == errors
 
 
 @pytest.fixture
