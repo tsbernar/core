@@ -250,23 +250,27 @@ async def async_update_core(
 
 
 @api_data
-def async_get_yellow_settings(hass: HomeAssistant) -> dict[str, bool]:
+async def async_get_yellow_settings(hass: HomeAssistant) -> dict[str, bool]:
     """Return settings specific to Home Assistant Yellow.
 
     This method returns a coroutine.
     """
     hassio: HassIO = hass.data[DOMAIN]
-    return hassio.send_command("/os/board/yellow", method="get")
+    return await hassio.send_command("/os/boards/yellow", method="get")
 
 
 @api_data
-def async_set_yellow_settings(hass: HomeAssistant, settings: dict[str, bool]) -> None:
+async def async_set_yellow_settings(
+    hass: HomeAssistant, settings: dict[str, bool]
+) -> None:
     """Return settings specific to Home Assistant Yellow.
 
     This method returns a coroutine.
     """
     hassio: HassIO = hass.data[DOMAIN]
-    return hassio.send_command("/os/board/yellow", method="post", payload=settings)
+    return await hassio.send_command(
+        "/os/boards/yellow", method="post", payload=settings
+    )
 
 
 class HassIO:
