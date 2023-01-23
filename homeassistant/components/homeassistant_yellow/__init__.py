@@ -1,13 +1,18 @@
 """The Home Assistant Yellow integration."""
 from __future__ import annotations
 
+from datetime import timedelta
 import logging
+
+import async_timeout
 
 from homeassistant.components.hassio import (
     AddonError,
     AddonInfo,
     AddonManager,
     AddonState,
+    HassioAPIError,
+    async_get_yellow_settings,
     get_os_info,
 )
 from homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon import (
@@ -15,10 +20,15 @@ from homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon 
     get_zigbee_socket,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import RADIO_DEVICE, ZHA_HW_DISCOVERY_DATA
+from .const import DOMAIN, RADIO_DEVICE, ZHA_HW_DISCOVERY_DATA
+from .models import YellowData
+
+PLATFORMS = [Platform.SWITCH]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +76,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
         return False
 
+    async def async_update_data() -> dict[str, bool]:
+        """Fetch data from API endpoint."""
+        try:
+            # Note: asyncio.TimeoutError and aiohttp.ClientError are already
+            # handled by the data update coordinator.
+            async with async_timeout.timeout(10):
+                led_settings: dict[str, bool] = await async_get_yellow_settings(hass)
+                return led_settings
+        except HassioAPIError as err:
+            raise UpdateFailed(
+                "Failed to call supervisor endpoint /os/boards/yellow"
+            ) from err
+
+    coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        # Name of the data. For logging purposes.
+        name=DOMAIN,
+        update_method=async_update_data,
+        # Polling interval. Will only be polled if there are subscribers.
+        update_interval=timedelta(seconds=30),
+    )
+    await coordinator.async_config_entry_first_refresh()
+
     addon_info = await _multi_pan_addon_info(hass, entry)
 
     if not addon_info:
@@ -85,9 +119,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data=hw_discovery_data,
     )
 
+    hass.data[DOMAIN] = YellowData(coordinator)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return True
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data.pop(DOMAIN)
+    return unload_ok
