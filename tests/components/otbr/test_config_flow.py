@@ -94,7 +94,7 @@ async def test_hassio_discovery_flow(hass: HomeAssistant) -> None:
     }
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Open Thread Border Router"
+    assert result["title"] == "blah"
     assert result["data"] == expected_data
     assert result["options"] == {}
     assert len(mock_setup_entry.mock_calls) == 1
@@ -102,7 +102,7 @@ async def test_hassio_discovery_flow(hass: HomeAssistant) -> None:
     config_entry = hass.config_entries.async_entries(otbr.DOMAIN)[0]
     assert config_entry.data == expected_data
     assert config_entry.options == {}
-    assert config_entry.title == "Open Thread Border Router"
+    assert config_entry.title == "blah"
     assert config_entry.unique_id == otbr.DOMAIN
 
 

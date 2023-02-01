@@ -55,6 +55,6 @@ class OTBRConfigFlow(ConfigFlow, domain=DOMAIN):
         url = f"http://{config['host']}:{config['port']}"
         await self.async_set_unique_id(DOMAIN)
         return self.async_create_entry(
-            title="Open Thread Border Router",
+            title=discovery_info.name,
             data={"url": url},
         )
