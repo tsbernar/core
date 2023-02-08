@@ -42,7 +42,7 @@ def update_events(hass):
 
 
 async def test_get(hass, registry):
-    """test we can get an item."""
+    """Test we can get an item."""
     entry = registry.async_get_or_create("light", "hue", "1234")
 
     assert registry.async_get(entry.entity_id) is entry
