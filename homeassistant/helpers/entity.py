@@ -226,12 +226,10 @@ class Entity(ABC):
     entity_id: str = None  # type: ignore[assignment]
 
     # Owning hass instance. Will be set by EntityPlatform
-    # While not purely typed, it makes typehinting more useful for us
-    # and removes the need for constant None checks or asserts.
-    hass: HomeAssistant = None  # type: ignore[assignment]
+    hass: HomeAssistant
 
     # Owning platform instance. Will be set by EntityPlatform
-    platform: EntityPlatform | None = None
+    platform: EntityPlatform
 
     # Entity description instance for this Entity
     entity_description: EntityDescription
@@ -789,8 +787,8 @@ class Entity(ABC):
         self._platform_state = EntityPlatformState.NOT_ADDED
         self._call_on_remove_callbacks()
 
-        self.hass = None  # type: ignore[assignment]
-        self.platform = None
+        delattr(self, "hass")
+        delattr(self, "platform")
         self.parallel_updates = None
 
     async def add_to_platform_finish(self) -> None:
@@ -921,25 +919,6 @@ class Entity(ABC):
         assert self.platform is not None
         self.entity_id = self.registry_entry.entity_id
         await self.platform.async_add_entities([self])
-
-    def __eq__(self, other: Any) -> bool:
-        """Return the comparison."""
-        if not isinstance(other, self.__class__):
-            return False
-
-        # Can only decide equality if both have a unique id
-        if self.unique_id is None or other.unique_id is None:
-            return False
-
-        # Ensure they belong to the same platform
-        if self.platform is not None or other.platform is not None:
-            if self.platform is None or other.platform is None:
-                return False
-
-            if self.platform.platform != other.platform.platform:
-                return False
-
-        return self.unique_id == other.unique_id
 
     def __repr__(self) -> str:
         """Return the representation."""
