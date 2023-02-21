@@ -4,16 +4,20 @@ from __future__ import annotations
 import logging
 
 import python_otbr_api
+from python_otbr_api import tlv_parser
 import voluptuous as vol
 
 from homeassistant.components.hassio import HassioServiceInfo
 from homeassistant.components.thread import async_get_preferred_dataset
+from homeassistant.components.zha import async_get_channel
 from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import CONF_URL
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
+
+DEFAULT_CHANNEL = 15
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,11 +31,21 @@ class OTBRConfigFlow(ConfigFlow, domain=DOMAIN):
         """Connect to the OTBR and create a dataset if it doesn't have one."""
         api = python_otbr_api.OTBR(url, async_get_clientsession(self.hass), 10)
         if await api.get_active_dataset_tlvs() is None:
-            if dataset := await async_get_preferred_dataset(self.hass):
-                await api.set_active_dataset_tlvs(bytes.fromhex(dataset))
+            zha_channel = async_get_channel(self.hass) or DEFAULT_CHANNEL
+            thread_dataset_channel = None
+            thread_dataset_tlv = await async_get_preferred_dataset(self.hass)
+            if thread_dataset_tlv:
+                dataset = tlv_parser.parse_tlv(thread_dataset_tlv)
+                if channel_str := dataset.get(tlv_parser.MeshcopTLVType.CHANNEL):
+                    thread_dataset_channel = int(channel_str)
+
+            if thread_dataset_tlv is not None and zha_channel == thread_dataset_channel:
+                await api.set_active_dataset_tlvs(bytes.fromhex(thread_dataset_tlv))
             else:
                 await api.create_active_dataset(
-                    python_otbr_api.OperationalDataSet(network_name="home-assistant")
+                    python_otbr_api.OperationalDataSet(
+                        channel=zha_channel or 15, network_name="home-assistant"
+                    )
                 )
             await api.set_enabled(True)
 

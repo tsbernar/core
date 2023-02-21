@@ -4,7 +4,7 @@
   "after_dependencies": ["hassio"],
   "codeowners": ["@home-assistant/core"],
   "config_flow": true,
-  "dependencies": ["thread"],
+  "dependencies": ["thread", "zha"],
   "documentation": "https://www.home-assistant.io/integrations/otbr",
   "integration_type": "service",
   "iot_class": "local_polling",

@@ -187,3 +187,16 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     _LOGGER.info("Migration to version %s successful", config_entry.version)
     return True
+
+
+def async_get_channel(hass: HomeAssistant) -> int | None:
+    """Return the channel if configured by the user, or None."""
+    if not (data_zha := hass.data.get(DATA_ZHA)) or not (
+        zha_config := data_zha.get(DATA_ZHA_CONFIG)
+    ):
+        return None
+    if (
+        channel := zha_config.get("zigpy_config", {}).get("network", {}).get("channel")
+    ) is None:
+        return None
+    return int(channel)
