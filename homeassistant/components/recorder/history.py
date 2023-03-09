@@ -59,6 +59,7 @@ NEED_ATTRIBUTE_DOMAINS = {
     "water_heater",
 }
 
+_QUERY_CACHE = {}
 
 _BASE_STATES = (
     States.entity_id,
@@ -170,21 +171,30 @@ def lambda_stmt_and_join_attributes(
         if schema_version >= 31:
             if include_last_changed:
                 return (
-                    lambda_stmt(lambda: select(*_QUERY_STATE_NO_ATTR)),
+                    lambda_stmt(
+                        lambda: select(*_QUERY_STATE_NO_ATTR), lambda_cache=_QUERY_CACHE
+                    ),
                     False,
                 )
             return (
-                lambda_stmt(lambda: select(*_QUERY_STATE_NO_ATTR_NO_LAST_CHANGED)),
+                lambda_stmt(
+                    lambda: select(*_QUERY_STATE_NO_ATTR_NO_LAST_CHANGED),
+                    lambda_cache=_QUERY_CACHE,
+                ),
                 False,
             )
         if include_last_changed:
             return (
-                lambda_stmt(lambda: select(*_QUERY_STATE_NO_ATTR_PRE_SCHEMA_31)),
+                lambda_stmt(
+                    lambda: select(*_QUERY_STATE_NO_ATTR_PRE_SCHEMA_31),
+                    lambda_cache=_QUERY_CACHE,
+                ),
                 False,
             )
         return (
             lambda_stmt(
-                lambda: select(*_QUERY_STATE_NO_ATTR_NO_LAST_CHANGED_PRE_SCHEMA_31)
+                lambda: select(*_QUERY_STATE_NO_ATTR_NO_LAST_CHANGED_PRE_SCHEMA_31),
+                lambda_cache=_QUERY_CACHE,
             ),
             False,
         )
@@ -194,25 +204,48 @@ def lambda_stmt_and_join_attributes(
     if schema_version < 25:
         if include_last_changed:
             return (
-                lambda_stmt(lambda: select(*_QUERY_STATES_PRE_SCHEMA_25)),
+                lambda_stmt(
+                    lambda: select(*_QUERY_STATES_PRE_SCHEMA_25),
+                    lambda_cache=_QUERY_CACHE,
+                ),
                 False,
             )
         return (
-            lambda_stmt(lambda: select(*_QUERY_STATES_PRE_SCHEMA_25_NO_LAST_CHANGED)),
+            lambda_stmt(
+                lambda: select(*_QUERY_STATES_PRE_SCHEMA_25_NO_LAST_CHANGED),
+                lambda_cache=_QUERY_CACHE,
+            ),
             False,
         )
 
     if schema_version >= 31:
         if include_last_changed:
-            return lambda_stmt(lambda: select(*_QUERY_STATES)), True
-        return lambda_stmt(lambda: select(*_QUERY_STATES_NO_LAST_CHANGED)), True
+            return (
+                lambda_stmt(lambda: select(*_QUERY_STATES), lambda_cache=_QUERY_CACHE),
+                True,
+            )
+        return (
+            lambda_stmt(
+                lambda: select(*_QUERY_STATES_NO_LAST_CHANGED),
+                lambda_cache=_QUERY_CACHE,
+            ),
+            True,
+        )
     # Finally if no migration is in progress and no_attributes
     # was not requested, we query both attributes columns and
     # join state_attributes
     if include_last_changed:
-        return lambda_stmt(lambda: select(*_QUERY_STATES_PRE_SCHEMA_31)), True
+        return (
+            lambda_stmt(
+                lambda: select(*_QUERY_STATES_PRE_SCHEMA_31), lambda_cache=_QUERY_CACHE
+            ),
+            True,
+        )
     return (
-        lambda_stmt(lambda: select(*_QUERY_STATES_NO_LAST_CHANGED_PRE_SCHEMA_31)),
+        lambda_stmt(
+            lambda: select(*_QUERY_STATES_NO_LAST_CHANGED_PRE_SCHEMA_31),
+            lambda_cache=_QUERY_CACHE,
+        ),
         True,
     )
 

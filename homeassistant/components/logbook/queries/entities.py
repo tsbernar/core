@@ -29,6 +29,8 @@ from .common import (
     select_states_context_only,
 )
 
+_QUERY_CACHE = {}
+
 
 def _select_entities_context_ids_sub_query(
     start_day: float,
@@ -105,7 +107,8 @@ def entities_stmt(
             event_types,
             entity_ids,
             json_quoted_entity_ids,
-        ).order_by(Events.time_fired_ts)
+        ).order_by(Events.time_fired_ts),
+        lambda_cache=_QUERY_CACHE,
     )
 
 
