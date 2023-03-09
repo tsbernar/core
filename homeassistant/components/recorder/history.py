@@ -16,7 +16,11 @@ from sqlalchemy.orm.properties import MappedColumn
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import literal
-from sqlalchemy.sql.lambdas import StatementLambdaElement
+from sqlalchemy.sql.lambdas import (
+    AnalyzedFunction,
+    NonAnalyzedFunction,
+    StatementLambdaElement,
+)
 
 from homeassistant.const import COMPRESSED_STATE_LAST_UPDATED, COMPRESSED_STATE_STATE
 from homeassistant.core import HomeAssistant, State, split_entity_id
@@ -59,8 +63,9 @@ NEED_ATTRIBUTE_DOMAINS = {
     "water_heater",
 }
 
-_QUERY_CACHE = {}
-
+_QUERY_CACHE: MutableMapping[
+    tuple[Any, ...], NonAnalyzedFunction | AnalyzedFunction
+] = {}
 _BASE_STATES = (
     States.entity_id,
     States.state,

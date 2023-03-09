@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 import contextlib
 import dataclasses
 from datetime import datetime, timedelta
@@ -22,7 +22,11 @@ from sqlalchemy.engine.row import Row
 from sqlalchemy.exc import OperationalError, SQLAlchemyError, StatementError
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import literal_column, true
-from sqlalchemy.sql.lambdas import StatementLambdaElement
+from sqlalchemy.sql.lambdas import (
+    AnalyzedFunction,
+    NonAnalyzedFunction,
+    StatementLambdaElement,
+)
 import voluptuous as vol
 
 from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT
@@ -85,8 +89,10 @@ from .util import (
 if TYPE_CHECKING:
     from . import Recorder
 
-_QUERY_CACHE = {}
 
+_QUERY_CACHE: MutableMapping[
+    tuple[Any, ...], NonAnalyzedFunction | AnalyzedFunction
+] = {}
 QUERY_STATISTICS = (
     Statistics.metadata_id,
     Statistics.start_ts,
