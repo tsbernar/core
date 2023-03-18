@@ -2497,6 +2497,11 @@ def _validate_db_schema_utf8(
     return schema_errors
 
 
+def _get_future_year() -> int:
+    """Get a year in the future."""
+    return datetime.now().year + 1
+
+
 def _validate_db_schema(
     hass: HomeAssistant, instance: Recorder, session_maker: Callable[[], Session]
 ) -> set[str]:
@@ -2514,9 +2519,16 @@ def _validate_db_schema(
     # This number can't be accurately represented as a 32-bit float
     precise_number = 1.000000000000001
     # This time can't be accurately represented unless datetimes have µs precision
-    precise_time = datetime(2020, 10, 6, microsecond=1, tzinfo=dt_util.UTC)
-
-    start_time = datetime(2020, 10, 6, tzinfo=dt_util.UTC)
+    #
+    # We want to insert statistics for a time in the future, in case they
+    # have conflicting metadata_id's with existing statistics that were
+    # never cleaned up. By inserting in the future, we can be sure that
+    # that by selecting the last inserted row, we will get the one we
+    # just inserted.
+    #
+    future_year = _get_future_year()
+    precise_time = datetime(future_year, 10, 6, microsecond=1, tzinfo=dt_util.UTC)
+    start_time = datetime(future_year, 10, 6, tzinfo=dt_util.UTC)
     statistic_id = f"{DOMAIN}.db_test"
 
     metadata: StatisticMetaData = {
@@ -2548,8 +2560,8 @@ def _validate_db_schema(
         for column in columns:
             if stored[column] != expected[column]:
                 schema_errors.add(f"{table_name}.{supports}")
-                _LOGGER.debug(
-                    "Column %s in database table %s does not support %s (%s != %s)",
+                _LOGGER.error(
+                    "Column %s in database table %s does not support %s (stored=%s != expected=%s)",
                     column,
                     table_name,
                     supports,
@@ -2584,9 +2596,15 @@ def _validate_db_schema(
                     )
                     continue
 
+                # We want to look at the last inserted row to make sure there
+                # is not previous garbage data in the table that would cause
+                # the test to produce an incorrect result. To achieve this,
+                # we inserted a row in the future, and now we select the last
+                # inserted row back.
+                last_stored_statistic = stored_statistic[-1]
                 check_columns(
                     schema_errors,
-                    stored_statistic[0],
+                    last_stored_statistic,
                     statistics,
                     ("max", "mean", "min", "state", "sum"),
                     table.__tablename__,
@@ -2595,7 +2613,7 @@ def _validate_db_schema(
                 assert statistics["last_reset"]
                 check_columns(
                     schema_errors,
-                    stored_statistic[0],
+                    last_stored_statistic,
                     {
                         "last_reset": datetime_to_timestamp_or_none(
                             statistics["last_reset"]
@@ -2679,18 +2697,14 @@ def correct_db_schema(
                 ],
             )
         if f"{table.__tablename__}.µs precision" in schema_errors:
-            # Attempt to convert datetime columns to µs precision
-            if instance.dialect_name == SupportedDialect.MYSQL:
-                datetime_type = "DATETIME(6)"
-            else:
-                datetime_type = "TIMESTAMP(6) WITH TIME ZONE"
+            # Attempt to convert timestamp columns to µs precision
             _modify_columns(
                 session_maker,
                 engine,
                 table.__tablename__,
                 [
-                    f"last_reset {datetime_type}",
-                    f"start {datetime_type}",
+                    "last_reset_ts DOUBLE PRECISION",
+                    "start_ts DOUBLE PRECISION",
                 ],
             )
 
