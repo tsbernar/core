@@ -15,11 +15,15 @@ import pkg_resources
 
 _LOGGER = logging.getLogger(__name__)
 
+def is_conda_env() -> bool:
+    env = os.environ.copy()
+    if env.get("CONDA_SHLVL") and env.get("CONDA_SHLVL") != "0":
+        return True
 
 def is_virtual_env() -> bool:
     """Return if we run in a virtual environment."""
     # Check supports venv && virtualenv
-    return getattr(sys, "base_prefix", sys.prefix) != sys.prefix or hasattr(
+    return is_conda_env() or getattr(sys, "base_prefix", sys.prefix) != sys.prefix or hasattr(
         sys, "real_prefix"
     )
 
